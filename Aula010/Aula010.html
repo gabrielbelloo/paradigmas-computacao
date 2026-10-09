@@ -1,0 +1,114 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Aula 10 · Gabriel Bello de Almeia</title><style>body{font:15px/1.5 "Segoe UI",system-ui,sans-serif;max-width:820px;margin:2rem auto;padding:0 16px;color:#111}h2{border-bottom:2px solid #ddd;padding-bottom:.25rem;margin-top:1.6rem}dt{font-weight:700;margin-top:.6rem}dd{margin:.2rem 0 0;white-space:pre-wrap}dd.vazio{color:#b42318;font-style:italic}img{max-width:100%;border:1px solid #ccc;border-radius:6px}pre{background:#f4f4f4;padding:.6rem;border-radius:6px;white-space:pre-wrap;font:12.5px/1.45 Consolas,monospace}</style><h1>Laboratório de Concorrência · Aula 10</h1><p>Gabriel Bello de Almeia · RA 24033164-2 · Turma C<br>Gerado em 09/10/2026, 20:39:01 · tempo registrado no cronômetro: 75:58</p><h2>Preparação: Concorrência em cinco minutos</h2><dl><dt>0.1 Com suas palavras: qual é a diferença entre sincronização de cooperação e de competição? Dê um exemplo do dia a dia (fora da computação) para cada uma.</dt><dd>A sincronização de cooperação acontece quando precisa esperar outra terminar ou realizar algo para continuar. Já a sincronização de competição ocorre quando duas ou mais tarefas querem utilizar o mesmo recurso, sendo necessário controlar o acesso para evitar conflitos. 
+Exemplo de cooperação: Um garçom precisa esperar um cozinheiro terminar o preparo do prato para poder servi-lo
+Exemplo de competição: Duas pessoas querem utilizar uma máquina de lavar ao mesmo tempo, então é necessário organizar para que cada uma possa utilizar por vez</dd></dl><h2>Prática 1: A condição de corrida</h2><dl><dt>Previsão: Duas threads somam 1.000.000 cada. Que valor você espera que o programa imprima?</dt><dd>Espero que o programa imprima algum número entre 1.000.000 e 2.000.000, pois algumas somas podem se perder devido à condição de corrida</dd><dt>1ª execução (n = 1.000.000)</dt><dd>1936035</dd><dt>2ª execução (n = 1.000.000)</dt><dd>1353332</dd><dt>3ª execução (n = 1.000.000)</dt><dd>1025694</dd><dt>Saída do programa</dt><dd><pre>esperado: 2000000
+obtido:   1936035
+
+esperado: 2000000
+obtido:   1353332
+
+esperado: 2000000
+obtido:   1025694
+
+esperado: 2000
+obtido:   2000
+
+esperado: 2000
+obtido:   2000</pre></dd><dt>1.1 Os valores bateram com o esperado? Foram iguais nas três execuções? Por que mudam de uma execução para outra?</dt><dd>Os valores bateram com o que eu imaginava, foram diferentes em cada execução. Eles mudam de uma execução para outra pois, como o sistema faz três passos (ler, somar e gravar), se duas threads lerem o mesmo valor antes de qualquer uma gravar, o um dos valores se perde, por isso o resultado obtido nunca chega à 2.000.000</dd><dt>1.2 Explique, passo a passo, como uma atualização se perde. Use os três passos (ler, somar, gravar) e as duas threads.</dt><dd>Como o sistema faz três passos e possui dois threads, pode acontecer de o primeiro thread ler o valor 10, somar para 11 e antes de gravar, o segundo thread ler o valor 10, somar para 11 e gravar por cima da soma 11 que o primeiro thread havia calculado, nesse caso, um número seria perdido</dd><dt>1.3 Com n = 1000, o que aconteceu? Por que isso torna esse tipo de erro perigoso em sistemas reais? Pense em como o programa se comportaria nos testes e em produção.</dt><dd>Com n = 1000 o contador funcionou como esperado, o que torne esse erro especialmente perigoso, pois em algumas situações ele pode nos "enganar" retornando o valor correto. No caso testado, por exemplo, ao testar com n = 1000, os desenvolvedores achariam que está tudo bem e que não há nenhum erro, porém em produção com 1.000.000, o erro iria ocorrer</dd></dl><h2>Prática 2: Todas as respostas possíveis (Figura 13.1)</h2><dl><dt>Ordens testadas no simulador</dt><dd>AABABB → 6
+AAABBB → 8
+BBBAAA → 7
+BBAABA → 4</dd><dt>Saída do programa</dt><dd><pre>AAABBB -&gt; 8
+BBBAAA -&gt; 7
+ABABAB -&gt; 6
+Ordens possíveis: 20
+TOTAL = 4:  9 ordens, por exemplo AABBBA
+TOTAL = 6:  9 ordens, por exemplo AABABB
+TOTAL = 7:  1 ordens, por exemplo BBBAAA
+TOTAL = 8:  1 ordens, por exemplo AAABBB</pre></dd><dt>2.1 Quantas ordens são possíveis e quantos resultados diferentes aparecem? Quantas ordens dão o resultado "correto" (8)?</dt><dd>AAABBB	8
+AABABB	8
+AABBAB	6
+AABBBA	7
+ABAABB	8
+ABABAB	6
+ABABBA	7
+ABBAAB	6
+ABBABA	7
+ABBBAA	4
+BAAABB	8
+BAABAB	6
+BAABBA	7
+BABAAB	6
+BABABA	7
+BABBAA	4
+BBAAAB	6
+BBAABA	7
+BBABAA	4
+BBBAAA	4</dd><dt>2.2 Escolha uma ordem que dá 4 e explique passo a passo por que o resultado é 4. O que aconteceu com a operação de B?</dt><dd>ABBBAA resulta em quatro, pois, a tarefa A lê o valor 3, em seguida a tarefa B lê, multiplica e grava o valor, porém a tarefa A continua trabalhando com o valor 3 que foi lido anteriormente, em seguida ela incrementa 1 e grava, resultando em 4</dd></dl><h2>Prática 3: Corrigindo a corrida</h2><dl><dt>Previsão: As três versões fazem a mesma conta. Qual você acha que será a mais rápida? E alguma será incorreta?</dt><dd>Creio que será synchronized a mais rápida, e imagino que todas funcionaram bem</dd><dt>Saída do programa</dt><dd><pre>esperado:          2000000
+sem sincronizacao: 1027267 em 2 ms
+synchronized:      2000000 em 122 ms
+AtomicInteger:     2000000 em 66 ms</pre></dd><dt>3.1 Quais versões deram o valor correto? Compare os tempos: por que a versão correta costuma ser mais lenta que a versão sem sincronização?</dt><dd>esperado, synchronized e AtomicInteger funcionaram como esperado. A versão correta costuma ser mais demorada pois passa por algoritmos que corrigem a condição de corrida</dd><dt>3.2 Uma transferência bancária tira dinheiro de uma conta e coloca em outra. Um AtomicInteger em cada saldo resolve? Por quê? O que seria preciso?</dt><dd>Não necessariamente o AtomicInteger em si em cada saldo já resolve</dd></dl><h2>Prática 4: Impasse (deadlock)</h2><dl><dt>Previsão: Leia o código: A pega X e depois Y; B pega Y e depois X. As mensagens "A terminou" e "B terminou" vão aparecer?</dt><dd>As mensagens não irão aparecem pois as threads travam uma a outra</dd><dt>Saídas (antes e depois da correção)</dt><dd><pre>IMPASSE: 2 threads presas</pre></dd><dt>4.1 Por que as duas threads ficaram presas? Descreva o que cada uma tinha e o que cada uma esperava.</dt><dd>Elas ficaram presas pois a thread A bloqueia o recurso X enquanto espera Y e a thread B bloqueia Y enquanto espera X, ou seja, elas ficam bloqueando os recursos para sempre</dd><dt>4.2 Por que pegar os recursos sempre na mesma ordem elimina o impasse? Dê um exemplo de sistema real em que isso poderia acontecer.</dt><dd>Quando as threads pegam os recursos na mesma ordem, o impasse não ocorre, pois a ordem global impede esse ciclo de espera.</dd></dl><h2>Prática 5: Mensagens em vez de memória compartilhada</h2><dl><dt>Previsão: São 6 tarefas de 100 ms divididas entre 3 trabalhadores. Quanto tempo você espera que leve no total? E com 1 trabalhador? E com 6?</dt><dd>3 trabalhadores = 200ms
+1 trabalhador = 600ms
+6 trabalhadores = 100ms</dd><dt>Tempo com 1 trabalhador</dt><dd>600ms</dd><dt>Tempo com 3 trabalhadores</dt><dd>200ms</dd><dt>Tempo com 6 trabalhadores</dt><dd>100ms</dd><dt>Saída do programa</dt><dd><pre>trabalhador 3 fez a tarefa 1
+trabalhador 1 fez a tarefa 2
+trabalhador 2 fez a tarefa 3
+trabalhador 2 fez a tarefa 6
+trabalhador 3 fez a tarefa 4
+trabalhador 1 fez a tarefa 5
+3 trabalhadores, 6 tarefas de 100 ms: levou 200ms</pre></dd><dt>5.1 Explique os três tempos. Por que este programa não precisa de synchronized nem de trava?</dt><dd>Os tempos se explicam pois as tarefas são distribuídas entre os trabalhadores, reduzindo o tempo de execução com o aumento de trabalhadores. O programa não precisa de synchronized, pois, elas são distribuídas por um canal Go, e cada trabalhador recebe uma tarefa para executar. O canal coordena a comunicação e evita que vários trabalhadores recebam a mesma mensagem.</dd><dt>Saídas (antes e depois da troca)</dt><dd><pre>ANTES: fatal error: all goroutines are asleep - deadlock!
+
+goroutine 1 [chan send]:
+main.main()
+	/box/main.go:9 +0x38
+exit status 2
+
+DEPOIS: 1</pre></dd><dt>5.2 Por que o primeiro programa trava? Por que o canal com espaço para 1 mensagem resolve? (Dica: num canal sem espaço, quem envia espera alguém receber.)</dt><dd>No primeiro programa, o canal não possui buffer. Quando a goroutine tenta enviar o valor 1, ela precisa esperar que outra goroutine receba a mensagem. Como a mesma goroutine fica bloqueada no envio, ela nunca chega à instrução que recebe o valor.
+Com um buffer de capacidade 1, o canal consegue armazenar o valor 1 sem precisar de um receptor imediato. Assim, o programa continua, recebe o valor armazenado e imprime 1.</dd></dl><h2>Prática 6: O compilador como guarda</h2><dl><dt>Previsão: Este programa faz uma thread somar 1 a uma variável de main. O que você acha que acontece?</dt><dd>Creio que em rust, a soma deve funcionar</dd><dt>Saídas (o erro e o resultado com move)</dt><dd><pre>error[E0373]: closure may outlive the current function, but it borrows `contador`, which is owned by the current function
+ --&gt; HelloWorld.rs:7:27
+  |
+7 |     let t = thread::spawn(|| {
+  |                           ^^ may outlive borrowed value `contador`
+8 |         contador += 1;                       // a thread altera a variável de main
+  |         -------- `contador` is borrowed here
+  |
+note: function requires argument type to outlive `'static`
+ --&gt; HelloWorld.rs:7:13
+  |
+7 |       let t = thread::spawn(|| {
+  |  _____________^
+8 | |         contador += 1;                       // a thread altera a variável de main
+9 | |     });
+  | |______^
+help: to force the closure to take ownership of `contador` (and any other referenced variables), use the `move` keyword
+  |
+7 |     let t = thread::spawn(move || {
+  |                           ++++
+
+error[E0502]: cannot borrow `contador` as immutable because it is also borrowed as mutable
+  --&gt; HelloWorld.rs:11:20
+   |
+ 7 |       let t = thread::spawn(|| {
+   |               -             -- mutable borrow occurs here
+   |  _____________|
+   | |
+ 8 | |         contador += 1;                       // a thread altera a variável de main
+   | |         -------- first borrow occurs due to use of `contador` in closure
+ 9 | |     });
+   | |______- argument requires that `contador` is borrowed for `'static`
+10 |       t.join().unwrap();
+11 |       println!("{}", contador);
+   |                      ^^^^^^^^ immutable borrow occurs here
+   |
+note: requirement that the value outlives `'static` introduced here
+  --&gt; /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/thread/functions.rs:128:14
+
+error: aborting due to 2 previous errors
+
+Some errors have detailed explanations: E0373, E0502.
+For more information about an error, try `rustc --explain E0373`.</pre></dd><dt>Saída do programa</dt><dd><pre>contador = 400000</pre></dd><dt>6.1 Com move, o programa compila mas imprime 0. Por quê? (Dica: move faz a thread levar uma cópia do número.)</dt><dd>O move faz a thread receber sua própria cópia do número inteiro contador. Quando ela incrementa essa cópia, a variável original de main continua valendo zero</dd><dt>6.2 Compare com a Prática 1: em que momento o erro foi descoberto em Java e em Rust? Qual é a vantagem e qual é o custo para quem programa?</dt><dd>Em Java, o problema de concorrência da Prática 1 é descoberto durante a execução, quando duas threads podem modificar o contador simultaneamente e produzir um resultado incorreto. Em Rust, o compilador detecta determinados problemas de compartilhamento e acesso à memória antes da execução. A vantagem do Rust é reduzir a possibilidade de erros de concorrência em tempo de execução. O custo é que o programador precisa aprender e respeitar regras mais rigorosas de propriedade, empréstimo e sincronização, o que pode tornar a implementação inicial mais trabalhosa</dd></dl><h2>Prática 7: Uma thread só: o laço de eventos</h2><dl><dt>Previsão: Em que ordem você acha que as letras A, B, C e D serão impressas?</dt><dd>A, B, D, C</dd><dt>Saída do programa</dt><dd><pre>A
+D
+C
+B
+E: timer de 10 ms rodou depois de 300 ms</pre></dd><dt>7.1 Em que ordem as letras saíram? Por que B, com tempo 0, saiu depois de D e de C?</dt><dd>A é impresso imediatamente
+O setTimeout agenda B, mas não o executa naquele instante
+D é impresso imediatamente, antes de o código síncrono terminar
+C é executado como uma microtask, depois do código síncrono e antes dos callbacks de timer</dd><dt>7.2 O timer de 10 ms (linha E) rodou bem depois de 10 ms. Por quê? O que isso significa para um servidor Node.js que atende muitos usuários e faz um cálculo pesado?</dt><dd>O timer de 10 ms só é agendado quando o callback de B começa. Depois disso, a função ocupado(300) executa um laço que ocupa a única thread por cerca de 300 ms, impedindo o processamento do callback E durante esse período.
+Em um servidor Node.js, um cálculo pesado e síncrono pode bloquear o laço de eventos, atrasando requisições, timers e outras tarefas de todos os usuários atendidos por aquela instância</dd></dl><h2>Fechamento: Quem impede a corrida?</h2><dl><dt>Java sem sincronização</dt><dd>Ninguém: há corrida</dd><dt>Java com synchronized</dt><dd>O programador, com sincronização</dd><dt>Go com canais</dt><dd>O projeto: não há memória compartilhada</dd><dt>Rust com Arc e Mutex</dt><dd>O compilador</dd><dt>JavaScript</dt><dd>Só existe uma thread</dd><dt>8.1 Um site de venda de ingressos tem 1 lugar restante, e duas pessoas clicam em Comprar ao mesmo tempo. Qual problema desta atividade pode acontecer? Como você o evitaria?</dt><dd>Nesse caso pode ocorrer condição de corrida, pois, ambas veem disponibilidade e tentam comprar. Para resolver, deve tornar a verificação e a reserva uma operação única e atômica, com lock, transação no back, bloqueio de linha e etc. De modo que só um dos clientes consiga concluir, quem perder receberia a mensagem de que esgotaram os ingressos</dd><dt>8.2 Em uma frase: o que mais surpreendeu você nesta atividade?</dt><dd>Particularmente, foi que n= 1000 acabou fazendo a contagem corretamente, pois, como eu já havia testado com n = 1.000.000, imaginei que o mesmo erro fosse se repetir, o que não ocorreu</dd></dl></html>
